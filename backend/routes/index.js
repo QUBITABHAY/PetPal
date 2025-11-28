@@ -1,23 +1,32 @@
-const express = require("express")
-const router = express.Router()
+const express = require("express");
+const router = express.Router();
 
-const db = require("../firebase/firebase")
-const { initialController } = require("../controllers/init")
-const { initialMiddleware } = require("../middlewares/init")
+const {db} = require("../firebase/firebase");
 
-router.get("/", initialMiddleware, initialController)
+const { initialController } = require("../controllers/init");
+const { initialMiddleware } = require("../middlewares/init");
 
+// Use the separate pet, task, and healthlog routes
+const petRouter = require("./pet");
+const taskRouter = require("./task");
+const healthlogRouter = require("./healthlog");
+
+router.use("/pets", petRouter);
+router.use("/tasks", taskRouter);
+router.use("/", healthlogRouter);
+
+router.get("/", initialMiddleware, initialController);
 
 router.get("/test-firestore", async (req, res) => {
   try {
     await db.collection("test").add({
-      message: "Firestore connected!"
-    })
+      message: "Firestore connected!",
+    });
 
-    res.json({ success: true, message: "Connected to Firestore 🚀" })
+    res.json({ success: true, message: "Connected to Firestore 🚀" });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message })
+    res.status(500).json({ success: false, error: err.message });
   }
-})
+});
 
-module.exports = router
+module.exports = router;
