@@ -1,11 +1,16 @@
-const { db, admin } = require("../firebase/firebase");
+const { db, admin } = require('../firebase/firebase');
 
 const createTask = async (req, res) => {
     try {
-        const task = req.body;
+        const task = { ...req.body, userId: req.user.uid };
+        if (!task.id) {
+            return res.status(400).json({ success: false, error: "Task 'id' is required" });
+        }
+
         if (task.dueDate && typeof task.dueDate === 'string') {
             task.dueDate = admin.firestore.Timestamp.fromDate(new Date(task.dueDate));
         }
+
         await db.collection("tasks").doc(task.id).set(task);
         res.status(201).json({ success: true, message: "Task created", task });
     } catch (err) {
@@ -19,8 +24,10 @@ const getDailyTasks = async (req, res) => {
         today.setHours(0, 0, 0, 0);
         const tomorrow = new Date(today);
         tomorrow.setDate(today.getDate() + 1);
+
         const snapshot = await db
             .collection("tasks")
+            .where("userId", "==", req.user.uid)
             .where("dueDate", ">=", admin.firestore.Timestamp.fromDate(today))
             .where("dueDate", "<", admin.firestore.Timestamp.fromDate(tomorrow))
             .get();
@@ -46,11 +53,14 @@ const getUpcomingTasks = async (req, res) => {
     try {
         const now = new Date();
         now.setHours(0, 0, 0, 0);
+
         const snapshot = await db
             .collection("tasks")
+            .where("userId", "==", req.user.uid)
             .where("dueDate", ">", admin.firestore.Timestamp.fromDate(now))
             .orderBy("dueDate", "asc")
             .get();
+
         const tasks = snapshot.docs.map((doc) => doc.data());
         res.json({ success: true, tasks });
     } catch (err) {
@@ -62,16 +72,16 @@ const completeTask = async (req, res) => {
     try {
         const id = req.params.id;
         const { note } = req.body;
-        const doneAt = admin.firestore.Timestamp.now();
-
         const taskRef = db.collection("tasks").doc(id);
-        const taskDoc = await taskRef.get();
+        const doc = await taskRef.get();
 
-        if (!taskDoc.exists) {
+        if (!doc.exists || doc.data().userId !== req.user.uid) {
             return res.status(404).json({ success: false, error: "Task not found" });
         }
 
-        const taskData = taskDoc.data();
+        const taskData = doc.data();
+        const doneAt = admin.firestore.Timestamp.now();
+
         const updateData = { isDone: true, doneAt };
         if (note) {
             updateData.note = note;
@@ -121,5 +131,5 @@ module.exports = {
     createTask,
     getDailyTasks,
     getUpcomingTasks,
-    completeTask,
+    completeTask
 };
