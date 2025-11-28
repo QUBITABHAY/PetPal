@@ -24,7 +24,8 @@ export default function Profile({ user, navigation }) {
       }
       try {
         // Example: fetch user profile from backend (adjust endpoint as needed)
-        const res = await fetch("http://localhost:3000/api/auth/profile", {
+        const { PROFILE_API_URL } = require("../config");
+        const res = await fetch(PROFILE_API_URL, {
           headers: { Authorization: `Bearer ${user.token}` },
         });
         if (!res.ok) throw new Error("Failed to fetch profile");

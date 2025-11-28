@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { PETS_API_URL } from "../config";
 import {
   View,
   Text,
@@ -7,42 +9,66 @@ import {
   StyleSheet,
   Platform,
   Alert,
-} from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { Picker } from '@react-native-picker/picker';
+} from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { Picker } from "@react-native-picker/picker";
 
 export default function AddPet({ onPetAdded }) {
-  const [name, setName] = useState('');
-  const [species, setSpecies] = useState('Dog');
-  const [breed, setBreed] = useState('');
+  const [name, setName] = useState("");
+  const [species, setSpecies] = useState("Dog");
+  const [breed, setBreed] = useState("");
   const [date, setDate] = useState(new Date());
-  const [gender, setGender] = useState('Male');
+  const [gender, setGender] = useState("Male");
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   const handleDateChange = (event, selectedDate) => {
     const currentDate = selectedDate || date;
-    setShowDatePicker(Platform.OS === 'ios');
+    setShowDatePicker(Platform.OS === "ios");
     setDate(currentDate);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!name.trim() || !species.trim()) {
-      Alert.alert('Missing Information', 'Please provide at least a name and species for your pet.');
+      Alert.alert(
+        "Missing Information",
+        "Please provide at least a name and species for your pet."
+      );
       return;
     }
 
+    const userToken = await AsyncStorage.getItem("userToken");
     const newPet = {
+      id: `pet_${Date.now()}`,
       name: name.trim(),
       species: species.trim(),
       breed: breed.trim(),
-      birthdate: date.toISOString(),
       gender,
+      birthdate: date.toISOString(),
+      photoUrl: "",
+      vetContact: { name: "", phone: "" },
     };
 
-    console.log('New Pet:', newPet);
-    Alert.alert('Pet Added!', `${newPet.name} has been added to your family.`);
-    if (onPetAdded) {
-      onPetAdded(newPet);
+    try {
+      const response = await fetch(PETS_API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${userToken}`,
+        },
+        body: JSON.stringify(newPet),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        Alert.alert(
+          "Pet Added!",
+          `${newPet.name} has been added to your family.`
+        );
+        if (onPetAdded) onPetAdded(data.pet);
+      } else {
+        Alert.alert("Error", data.error || "Failed to add pet.");
+      }
+    } catch (err) {
+      Alert.alert("Error", err.message || "Failed to add pet.");
     }
   };
 
@@ -58,7 +84,10 @@ export default function AddPet({ onPetAdded }) {
 
       <Text style={styles.label}>Species</Text>
       <View style={styles.pickerContainer}>
-        <Picker selectedValue={species} onValueChange={(itemValue) => setSpecies(itemValue)}>
+        <Picker
+          selectedValue={species}
+          onValueChange={(itemValue) => setSpecies(itemValue)}
+        >
           <Picker.Item label="Dog" value="Dog" />
           <Picker.Item label="Cat" value="Cat" />
           <Picker.Item label="Bird" value="Bird" />
@@ -77,7 +106,10 @@ export default function AddPet({ onPetAdded }) {
 
       <Text style={styles.label}>Gender</Text>
       <View style={styles.pickerContainer}>
-        <Picker selectedValue={gender} onValueChange={(itemValue) => setGender(itemValue)}>
+        <Picker
+          selectedValue={gender}
+          onValueChange={(itemValue) => setGender(itemValue)}
+        >
           <Picker.Item label="Male" value="Male" />
           <Picker.Item label="Female" value="Female" />
         </Picker>
@@ -94,7 +126,7 @@ export default function AddPet({ onPetAdded }) {
           mode="date"
           display="default"
           onChange={handleDateChange}
-          maximumDate={new Date()} 
+          maximumDate={new Date()}
         />
       )}
 
@@ -108,52 +140,52 @@ export default function AddPet({ onPetAdded }) {
 const styles = StyleSheet.create({
   container: {
     padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 10,
   },
   label: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#374151',
+    fontWeight: "600",
+    color: "#374151",
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: "#F9FAFB",
     padding: 12,
     borderRadius: 8,
     marginBottom: 16,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: "#E5E7EB",
   },
   pickerContainer: {
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: "#E5E7EB",
     borderRadius: 8,
     marginBottom: 16,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   dateText: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: "#F9FAFB",
     padding: 14,
     borderRadius: 8,
     marginBottom: 16,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    overflow: 'hidden',
-    textAlign: 'center',
+    borderColor: "#E5E7EB",
+    overflow: "hidden",
+    textAlign: "center",
   },
   button: {
-    backgroundColor: '#2563EB',
+    backgroundColor: "#2563EB",
     padding: 14,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 10,
   },
   buttonText: {
-    color: 'white',
+    color: "white",
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
 });

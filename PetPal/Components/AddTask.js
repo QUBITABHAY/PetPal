@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { TASKS_API_URL, PETS_API_URL } from '../config';
 import {
   View,
   Text,
@@ -10,41 +12,71 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
-const DUMMY_PETS = [
-  { id: 'pet1', name: 'Buddy' },
-  { id: 'pet2', name: 'Lucy' },
-  { id: 'pet3', name: 'Max' },
-];
+// DUMMY_PETS removed, will fetch real pets
 
-export default function AddTask({ onTaskAdded, onCancel }) {
   const [title, setTitle] = useState('');
-  const [selectedPet, setSelectedPet] = useState(DUMMY_PETS[0]?.id);
+  const [selectedPet, setSelectedPet] = useState('');
   const [date, setDate] = useState(new Date());
   const [notes, setNotes] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [pets, setPets] = useState([]);
+
+  useEffect(() => {
+    const fetchPets = async () => {
+      const userToken = await AsyncStorage.getItem('userToken');
+      try {
+        const res = await fetch(PETS_API_URL, {
+          headers: { Authorization: `Bearer ${userToken}` },
+        });
+        const data = await res.json();
+        if (res.ok && Array.isArray(data.pets)) {
+          setPets(data.pets);
+          setSelectedPet(data.pets[0]?.id || '');
+        }
+      } catch {}
+    };
+    fetchPets();
+  }, []);
 
   const handleDateChange = (event, selectedDate) => {
     const currentDate = selectedDate || date;
-    setShowDatePicker(Platform.OS === 'ios'); 
+    setShowDatePicker(Platform.OS === 'ios');
     setDate(currentDate);
   };
-  const handleSubmit = () => {
+
+  const handleSubmit = async () => {
     if (!title.trim() || !selectedPet) {
       Alert.alert('Missing Information', 'Please provide a title and select a pet.');
       return;
     }
-
+    const userToken = await AsyncStorage.getItem('userToken');
     const newTask = {
-      title: title.trim(),
+      id: `task_${Date.now()}`,
       petId: selectedPet,
+      type: title.trim(),
       dueDate: date.toISOString(),
-      notes: notes.trim(),
-      isCompleted: false,
+      recurring: { type: 'none', interval: 0 },
+      isDone: false,
+      note: notes.trim(),
     };
-    console.log('New Task:', newTask);
-    Alert.alert('Task Added!', `"${newTask.title}" has been added.`);
-    if (onTaskAdded) {
-      onTaskAdded(newTask);
+    try {
+      const response = await fetch(TASKS_API_URL.replace('/upcoming', ''), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${userToken}`,
+        },
+        body: JSON.stringify(newTask),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        Alert.alert('Task Added!', `"${newTask.type}" has been added.`);
+        if (onTaskAdded) onTaskAdded(data.task);
+      } else {
+        Alert.alert('Error', data.error || 'Failed to add task.');
+      }
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Failed to add task.');
     }
   };
 
@@ -64,7 +96,7 @@ export default function AddTask({ onTaskAdded, onCancel }) {
           selectedValue={selectedPet}
           onValueChange={(itemValue) => setSelectedPet(itemValue)}
         >
-          {DUMMY_PETS.map((pet) => (
+          {pets.map((pet) => (
             <Picker.Item key={pet.id} label={pet.name} value={pet.id} />
           ))}
         </Picker>

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -6,56 +6,36 @@ import {
   FlatList,
   Image,
   TouchableOpacity,
+  ActivityIndicator,
 } from "react-native";
 
-const TASKS = [
-  {
-    id: "t1",
-    title: "Vaccination booster",
-    petName: "Luna",
-    species: "Dog",
-    dueDate: "Today",
-    dueTime: "5:00 PM",
-    notes: "Annual booster shot, carry old reports.",
-    petPhoto:
-      "https://images.pexels.com/photos/1108099/pexels-photo-1108099.jpeg",
-  },
-  {
-    id: "t2",
-    title: "Evening walk",
-    petName: "Luna",
-    species: "Dog",
-    dueDate: "Today",
-    dueTime: "7:30 PM",
-    notes: "Avoid crowded park.",
-    petPhoto:
-      "https://images.pexels.com/photos/1108099/pexels-photo-1108099.jpeg",
-  },
-  {
-    id: "t3",
-    title: "Deworming tablet",
-    petName: "Milo",
-    species: "Cat",
-    dueDate: "Tomorrow",
-    dueTime: "10:00 AM",
-    notes: "Give after breakfast.",
-    petPhoto:
-      "https://images.pexels.com/photos/1170986/pexels-photo-1170986.jpeg",
-  },
-  {
-    id: "t4",
-    title: "Nail trimming",
-    petName: "Coco",
-    species: "Bird",
-    dueDate: "Sat, 30 Nov",
-    dueTime: "3:00 PM",
-    notes: "",
-    petPhoto:
-      "https://images.pexels.com/photos/45851/bird-parrot-colorful-macaw-45851.jpeg",
-  },
-];
+import { TASKS_API_URL } from "../config";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const TasksScreen = () => {
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchTasks = async () => {
+      try {
+        const userToken = await AsyncStorage.getItem("userToken");
+        const response = await fetch(TASKS_API_URL, {
+          headers: { Authorization: `Bearer ${userToken}` },
+        });
+        if (!response.ok) throw new Error("Failed to fetch tasks");
+        const data = await response.json();
+        setTasks(data.tasks || data);
+      } catch (err) {
+        setError(err.message || "Error fetching tasks");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTasks();
+  }, []);
+
   const renderTaskItem = ({ item }) => (
     <View style={styles.card}>
       <View style={styles.statusBar} />
@@ -102,13 +82,25 @@ const TasksScreen = () => {
         </Text>
       </View>
 
-      <FlatList
-        data={TASKS}
-        keyExtractor={(item) => item.id}
-        renderItem={renderTaskItem}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-      />
+      {loading ? (
+        <ActivityIndicator
+          size="large"
+          color="#4F46E5"
+          style={{ marginTop: 40 }}
+        />
+      ) : error ? (
+        <Text style={{ color: "red", marginTop: 40, textAlign: "center" }}>
+          {error}
+        </Text>
+      ) : (
+        <FlatList
+          data={tasks}
+          keyExtractor={(item) => item.id?.toString()}
+          renderItem={renderTaskItem}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
     </View>
   );
 };

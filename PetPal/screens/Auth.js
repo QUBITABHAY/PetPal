@@ -1,6 +1,6 @@
 import React, { useState, useContext } from "react";
 import { Platform } from "react-native";
-import { API_URL as ENV_API_URL } from "@env";
+import { API_BASE_URL } from "../config";
 import {
   View,
   Text,
@@ -19,20 +19,14 @@ export default function Auth({ onLoginSuccess }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  let API_URL = ENV_API_URL;
-  if (!API_URL) {
-    API_URL =
-      Platform.OS === "android"
-        ? "http://10.0.2.2:3000"
-        : "http://localhost:3000";
-  }
+  const API_URL = API_BASE_URL;
 
   const handleSignUp = async () => {
     if (isLoading) return;
     setIsLoading(true);
     console.log("Attempting to sign up with:", { fullName, email });
     try {
-      const response = await fetch(`${API_URL}/api/auth/register`, {
+      const response = await fetch(`${API_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: fullName, email, password }),
@@ -59,7 +53,7 @@ export default function Auth({ onLoginSuccess }) {
     setIsLoading(true);
     console.log("Attempting to log in with:", { email });
     try {
-      const response = await fetch(`${API_URL}/api/auth/login`, {
+      const response = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),

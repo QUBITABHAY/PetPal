@@ -10,6 +10,7 @@ import {
 } from "react-native";
 
 import { PETS_API_URL, TASKS_API_URL } from "../config";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const HomeScreen = () => {
   const [pets, setPets] = useState([]);
@@ -19,20 +20,23 @@ const HomeScreen = () => {
   useEffect(() => {
     const fetchPetsAndTasks = async () => {
       try {
+        const userToken = await AsyncStorage.getItem("userToken");
         // Fetch pets
-        const petsRes = await fetch(PETS_API_URL);
+        const petsRes = await fetch(PETS_API_URL, {
+          headers: { Authorization: `Bearer ${userToken}` },
+        });
         if (!petsRes.ok) throw new Error("Failed to fetch pets");
         const petsData = await petsRes.json();
-        // If backend returns { pets: [...] }
         const petsArr = Array.isArray(petsData)
           ? petsData
           : petsData.pets || [];
 
         // Fetch upcoming tasks
-        const tasksRes = await fetch(TASKS_API_URL);
+        const tasksRes = await fetch(TASKS_API_URL, {
+          headers: { Authorization: `Bearer ${userToken}` },
+        });
         if (!tasksRes.ok) throw new Error("Failed to fetch tasks");
         const tasksData = await tasksRes.json();
-        // If backend returns { tasks: [...] }
         const tasksArr = Array.isArray(tasksData)
           ? tasksData
           : tasksData.tasks || [];
