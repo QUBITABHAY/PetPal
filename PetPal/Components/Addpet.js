@@ -9,9 +9,11 @@ import {
   StyleSheet,
   Platform,
   Alert,
+  Image,
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Picker } from "@react-native-picker/picker";
+import * as ImagePicker from 'expo-image-picker';
 
 export default function AddPet({ onPetAdded }) {
   const [name, setName] = useState("");
@@ -20,11 +22,25 @@ export default function AddPet({ onPetAdded }) {
   const [date, setDate] = useState(new Date());
   const [gender, setGender] = useState("Male");
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [image, setImage] = useState(null);
 
   const handleDateChange = (event, selectedDate) => {
     const currentDate = selectedDate || date;
     setShowDatePicker(Platform.OS === "ios");
     setDate(currentDate);
+  };
+
+  const pickImage = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      setImage(result.assets[0].uri);
+    }
   };
 
   const handleSubmit = async () => {
@@ -37,31 +53,36 @@ export default function AddPet({ onPetAdded }) {
     }
 
     const userToken = await AsyncStorage.getItem("userToken");
-    const newPet = {
-      id: `pet_${Date.now()}`,
-      name: name.trim(),
-      species: species.trim(),
-      breed: breed.trim(),
-      gender,
-      birthdate: date.toISOString(),
-      photoUrl: "",
-      vetContact: { name: "", phone: "" },
-    };
+
+    const formData = new FormData();
+    formData.append('id', `pet_${Date.now()}`);
+    formData.append('name', name.trim());
+    formData.append('species', species.trim());
+    formData.append('breed', breed.trim());
+    formData.append('gender', gender);
+    formData.append('birthdate', date.toISOString());
+    formData.append('vetContact', JSON.stringify({ name: "", phone: "" }));
+
+    if (image) {
+      const filename = image.split('/').pop();
+      const match = /\.(\w+)$/.exec(filename);
+      const type = match ? `image/${match[1]}` : `image`;
+      formData.append('image', { uri: image, name: filename, type });
+    }
 
     try {
       const response = await fetch(PETS_API_URL, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${userToken}`,
         },
-        body: JSON.stringify(newPet),
+        body: formData,
       });
       const data = await response.json();
       if (response.ok) {
         Alert.alert(
           "Pet Added!",
-          `${newPet.name} has been added to your family.`
+          `${data.pet.name} has been added to your family.`
         );
         if (onPetAdded) onPetAdded(data.pet);
       } else {
@@ -74,6 +95,14 @@ export default function AddPet({ onPetAdded }) {
 
   return (
     <View style={styles.container}>
+      <TouchableOpacity onPress={pickImage} style={styles.imagePicker}>
+        {image ? (
+          <Image source={{ uri: image }} style={styles.image} />
+        ) : (
+          <Text style={styles.imagePickerText}>Pick an image</Text>
+        )}
+      </TouchableOpacity>
+
       <Text style={styles.label}>Pet's Name</Text>
       <TextInput
         style={styles.input}
@@ -187,5 +216,25 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 18,
     fontWeight: "bold",
+  },
+  imagePicker: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 150,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 10,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderStyle: 'dashed',
+  },
+  image: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 10,
+  },
+  imagePickerText: {
+    color: '#6B7280',
+    fontSize: 16,
   },
 });

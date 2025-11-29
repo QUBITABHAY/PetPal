@@ -3,6 +3,11 @@ const { db } = require('../firebase/firebase');
 const createPet = async (req, res) => {
   try {
     const pet = { ...req.body, userId: req.user.uid };
+
+    if (req.file) {
+      pet.photoUrl = req.file.path;
+    }
+
     if (!pet.id) {
       return res.status(400).json({ success: false, error: "Pet 'id' is required" });
     }
