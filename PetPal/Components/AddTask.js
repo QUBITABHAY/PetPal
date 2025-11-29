@@ -23,6 +23,8 @@ export default function AddTask({ onTaskAdded, initialPetId }) {
   const [notes, setNotes] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [pets, setPets] = useState([]);
+  const [recurringType, setRecurringType] = useState('none');
+  const [recurringInterval, setRecurringInterval] = useState('1');
 
   useEffect(() => {
     const fetchPets = async () => {
@@ -67,7 +69,12 @@ export default function AddTask({ onTaskAdded, initialPetId }) {
       petId: selectedPet,
       type: title.trim(),
       dueDate: date.toISOString(),
-      recurring: { type: 'none', interval: 0 },
+      type: title.trim(),
+      dueDate: date.toISOString(),
+      recurring: {
+        type: recurringType,
+        interval: parseInt(recurringInterval) || 1
+      },
       isDone: false,
       note: notes.trim(),
     };
@@ -161,6 +168,34 @@ export default function AddTask({ onTaskAdded, initialPetId }) {
         )
       )}
 
+      <Text style={styles.label}>Recurring</Text>
+      <View style={styles.pickerContainer}>
+        <Picker
+          selectedValue={recurringType}
+          onValueChange={(itemValue) => setRecurringType(itemValue)}
+        >
+          <Picker.Item label="None (One-time)" value="none" />
+          <Picker.Item label="Daily" value="daily" />
+          <Picker.Item label="Weekly" value="weekly" />
+          <Picker.Item label="Monthly" value="monthly" />
+        </Picker>
+      </View>
+
+      {
+        recurringType !== 'none' && (
+          <>
+            <Text style={styles.label}>Repeat Every (Interval)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g., 1"
+              value={recurringInterval}
+              onChangeText={setRecurringInterval}
+              keyboardType="numeric"
+            />
+          </>
+        )
+      }
+
       <Text style={styles.label}>Notes</Text>
       <TextInput
         style={[styles.input, styles.multilineInput]}
@@ -173,7 +208,7 @@ export default function AddTask({ onTaskAdded, initialPetId }) {
       <TouchableOpacity style={styles.button} onPress={handleSubmit}>
         <Text style={styles.buttonText}>Add Task</Text>
       </TouchableOpacity>
-    </View>
+    </View >
   );
 }
 
