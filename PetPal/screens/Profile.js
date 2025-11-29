@@ -11,7 +11,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { PETS_API_URL } from "../config";
 
-export default function Profile({ user, navigation }) {
+export default function Profile({ user, navigation, onLogout }) {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -47,7 +47,9 @@ export default function Profile({ user, navigation }) {
         text: "Logout",
         style: "destructive",
         onPress: () => {
-          if (user && typeof user.logout === "function") {
+          if (onLogout) {
+            onLogout();
+          } else if (user && typeof user.logout === "function") {
             user.logout();
           } else if (navigation && navigation.reset) {
             navigation.reset({ index: 0, routes: [{ name: "Auth" }] });

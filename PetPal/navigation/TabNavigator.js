@@ -7,7 +7,7 @@ import Profile from "../screens/Profile";
 
 const Tab = createBottomTabNavigator();
 
-export default function TabNavigator({ user }) {
+export default function TabNavigator({ user, onLogout }) {
   console.log("TabNavigator rendering");
   return (
     <Tab.Navigator
@@ -41,7 +41,7 @@ export default function TabNavigator({ user }) {
       <Tab.Screen name="Home" component={Home} />
       <Tab.Screen name="Tasks" component={Task} />
       <Tab.Screen name="Profile">
-        {(props) => <Profile {...props} user={user} />}
+        {(props) => <Profile {...props} user={user} onLogout={onLogout} />}
       </Tab.Screen>
     </Tab.Navigator>
   );
